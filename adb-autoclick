@@ -1,63 +1,176 @@
 #!/bin/bash
 
 # =========================================================
-# HOW TO GET TAP COORDINATES
+# ADB AUTO TAP RECORDER + PLAYER
 # =========================================================
 #
-# Enable:
+# Controls:
+#   r = record taps
+#   p = play taps
+#   c = clear taps
+#   q = quit
+#
+# Get coordinates:
 # Settings -> Developer options -> Pointer location
 #
-# Touch screen and read X/Y coordinates.
-#
-# Screen size:
-# adb shell wm size
-#
-# =========================================================
-# MULTI TAP ADB AUTO CLICKER
 # =========================================================
 
-# Delay between loops
-DELAY=1
-
-# 0 = infinite loop
+DELAY=0.5
 COUNT=0
 
-# =========================================================
-# TAP COORDINATES
-# FORMAT:
-# "X Y"
-# =========================================================
+TAPS=()
 
-TAPS=(
-  "500 1200"
-  "700 1000"
-  "300 800"
-)
-
-# =========================================================
+echo "ADB Auto Tap Recorder"
+echo ""
 
 adb devices
 
-run_taps() {
-    for TAP in "${TAPS[@]}"
-    do
-        X=$(echo $TAP | cut -d' ' -f1)
-        Y=$(echo $TAP | cut -d' ' -f2)
+record_taps() {
 
-        adb shell input tap $X $Y
+    echo ""
+    echo "Recording mode"
+    echo "Enter coordinates like:"
+    echo "500 1200"
+    echo ""
+    echo "Type 's' to stop recording"
+    echo ""
+
+    while true
+    do
+        read -p "> " INPUT
+
+        if [ "$INPUT" = "s" ]; then
+            break
+        fi
+
+        TAPS+=("$INPUT")
+        echo "Saved: $INPUT"
     done
 }
 
-if [ "$COUNT" -eq 0 ]; then
-    while true
+show_taps() {
+
+    echo ""
+
+    if [ ${#TAPS[@]} -eq 0 ]; then
+        echo "No taps saved"
+        return
+    fi
+
+    echo "Saved taps:"
+
+    for i in "${!TAPS[@]}"
     do
-        run_taps
-        sleep $DELAY
+        echo "$((i+1))) ${TAPS[$i]}"
     done
-else
-    for ((i=1; i<=COUNT; i++))
-    do
-        run_taps
-        sleep $DELAY
-    done
-fi
+}
+
+play_taps() {
+
+    if [ ${#TAPS[@]} -eq 0 ]; then
+        echo "No taps recorded"
+        return
+    fi
+
+    echo ""
+    echo "Playing taps..."
+    echo "Press CTRL+C to stop"
+    echo ""
+
+    run_taps() {
+
+        for TAP in "${TAPS[@]}"
+        do
+            X=$(echo $TAP | cut -d' ' -f1)
+            Y=$(echo $TAP | cut -d' ' -f2)
+
+            echo "Tap: ($X,$Y)"
+            adb shell input tap $X $Y
+        done
+    }
+
+    if [ "$COUNT" -eq 0 ]; then
+        while true
+        do
+            run_taps
+            sleep $DELAY
+        done
+    else
+        for ((i=1; i<=COUNT; i++))
+        do
+            run_taps
+            sleep $DELAY
+        done
+    fi
+}
+
+clear_taps() {
+
+    if [ ${#TAPS[@]} -eq 0 ]; then
+        echo "No taps to clear"
+        return
+    fi
+
+    show_taps
+
+    echo ""
+    echo "[a] Clear all"
+    echo "[number] Clear single tap"
+    echo ""
+
+    read -p "Select: " OPTION
+
+    if [ "$OPTION" = "a" ]; then
+
+        TAPS=()
+
+        echo "All taps cleared"
+        return
+    fi
+
+    INDEX=$((OPTION-1))
+
+    if [ "$INDEX" -ge 0 ] && [ "$INDEX" -lt ${#TAPS[@]} ]; then
+
+        unset TAPS[$INDEX]
+
+        # Rebuild array to fix indexes
+        TAPS=("${TAPS[@]}")
+
+        echo "Tap cleared"
+
+    else
+        echo "Invalid selection"
+    fi
+}
+
+while true
+do
+    echo ""
+    echo "[r] Record taps"
+    echo "[p] Play taps"
+    echo "[c] Clear taps"
+    echo "[q] Quit"
+    echo ""
+
+    read -p "Select option: " OPTION
+
+    case $OPTION in
+        r)
+            record_taps
+            ;;
+        p)
+            play_taps
+            ;;
+        c)
+            clear_taps
+            ;;
+        q)
+            echo "Bye"
+            exit 0
+            ;;
+        *)
+            echo "Invalid option"
+            ;;
+    esac
+done
