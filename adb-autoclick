@@ -1,0 +1,63 @@
+#!/bin/bash
+
+# =========================================================
+# HOW TO GET TAP COORDINATES
+# =========================================================
+#
+# Enable:
+# Settings -> Developer options -> Pointer location
+#
+# Touch screen and read X/Y coordinates.
+#
+# Screen size:
+# adb shell wm size
+#
+# =========================================================
+# MULTI TAP ADB AUTO CLICKER
+# =========================================================
+
+# Delay between loops
+DELAY=1
+
+# 0 = infinite loop
+COUNT=0
+
+# =========================================================
+# TAP COORDINATES
+# FORMAT:
+# "X Y"
+# =========================================================
+
+TAPS=(
+  "500 1200"
+  "700 1000"
+  "300 800"
+)
+
+# =========================================================
+
+adb devices
+
+run_taps() {
+    for TAP in "${TAPS[@]}"
+    do
+        X=$(echo $TAP | cut -d' ' -f1)
+        Y=$(echo $TAP | cut -d' ' -f2)
+
+        adb shell input tap $X $Y
+    done
+}
+
+if [ "$COUNT" -eq 0 ]; then
+    while true
+    do
+        run_taps
+        sleep $DELAY
+    done
+else
+    for ((i=1; i<=COUNT; i++))
+    do
+        run_taps
+        sleep $DELAY
+    done
+fi
